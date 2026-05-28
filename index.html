@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ExpenseFlow - Enterprise Expense Approval</title>
+<style>
+:root{
+  --bg:#0f1117;--surface:#181c27;--surface-2:#1e2333;
+  --border:#2a3045;--border-light:#3a4260;
+  --accent:#4f7cff;--accent-dim:#2a4acc;--accent-glow:rgba(79,124,255,.18);
+  --green:#22c98e;--green-dim:rgba(34,201,142,.15);
+  --red:#ff5c6a;--red-dim:rgba(255,92,106,.15);
+  --amber:#ffb347;--amber-dim:rgba(255,179,71,.15);
+  --text-primary:#e8eaf0;--text-secondary:#8892a4;--text-muted:#555f75;
+  --font-ui:'DM Sans',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono','Fira Code',monospace;
+  --radius:8px;--radius-lg:14px;--shadow:0 4px 24px rgba(0,0,0,.4);
+}
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-ui);background:var(--bg);color:var(--text-primary);min-height:100vh;font-size:14px;line-height:1.6}
+.app-shell{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.logo-mark{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff}
+.logo-text{font-size:15px;font-weight:600;letter-spacing:-.3px}
+.sidebar-nav{padding:12px 10px;flex:1}
+.nav-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);padding:8px 10px 4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius);cursor:pointer;color:var(--text-secondary);font-size:13.5px;font-weight:500;transition:all .15s;text-decoration:none;margin-bottom:2px}
+.nav-item:hover{background:var(--surface-2);color:var(--text-primary)}
+.nav-item.active{background:var(--accent-glow);color:var(--accent);border:1px solid rgba(79,124,255,.25)}
+.nav-icon{font-size:15px;width:18px;text-align:center}
+.nav-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px}
+.sidebar-footer{padding:14px 10px;border-top:1px solid var(--border)}
+.user-pill{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--radius);cursor:pointer}
+.user-pill:hover{background:var(--surface-2)}
+.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.user-name{font-size:12.5px;font-weight:600}
+.user-role{font-size:11px;color:var(--text-muted)}
+.main-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:56px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px}
+.breadcrumb{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary)}
+.bc-sep{color:var(--text-muted)}
+.topbar-actions{margin-left:auto;display:flex;gap:10px;align-items:center}
+.badge{padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.04em}
+.badge.draft{background:var(--surface-2);color:var(--text-secondary);border:1px solid var(--border)}
+.badge.pending{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(255,179,71,.3)}
+.badge.approved{background:var(--green-dim);color:var(--green);border:1px solid rgba(34,201,142,.3)}
+.content{flex:1;overflow-y:auto;padding:24px}
+.screen{display:none}
+.screen.active{display:block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;margin-bottom:16px}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.card-title{font-size:14px;font-weight:600}
+.card-sub{font-size:12px;color:var(--text-secondary);margin-top:2px}
+.steps-bar{display:flex;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 24px;margin-bottom:20px}
+.step{display:flex;align-items:center;gap:10px;flex:1}
+.step-circle{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;border:2px solid var(--border);color:var(--text-muted);transition:all .2s}
+.step.complete .step-circle{background:var(--green);border-color:var(--green);color:#fff}
+.step.current .step-circle{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 12px var(--accent-glow)}
+.step-lbl{font-size:12.5px;font-weight:500;color:var(--text-muted)}
+.step.complete .step-lbl,.step.current .step-lbl{color:var(--text-primary)}
+.step-line{flex:1;height:1px;background:var(--border);margin:0 12px;max-width:60px}
+.step-line.done{background:var(--green)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-grid.c1{grid-template-columns:1fr}
+.field{display:flex;flex-direction:column;gap:6px}
+.field.span2{grid-column:span 2}
+label{font-size:12px;font-weight:500;color:var(--text-secondary)}
+.req{color:var(--red);margin-left:2px}
+input,select,textarea{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-family:var(--font-ui);font-size:13.5px;padding:9px 12px;outline:none;transition:border-color .15s,box-shadow .15s;width:100%;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+input::placeholder{color:var(--text-muted)}
+textarea{resize:vertical;min-height:80px}
+select option{background:var(--surface-2)}
+.pfx-wrap{position:relative}
+.pfx{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none}
+.pfx+input{padding-left:28px}
+/* VALIDATION */
+.err-msg{font-size:11.5px;color:var(--red);margin-top:4px;display:none;align-items:center;gap:4px}
+.field.has-error .err-msg{display:flex}
+.field.has-error input,.field.has-error select,.field.has-error textarea{border-color:var(--red);box-shadow:0 0 0 3px var(--red-dim)}
+.field.is-valid input,.field.is-valid select,.field.is-valid textarea{border-color:var(--green)}
+.val-banner{display:none;background:var(--red-dim);border:1px solid rgba(255,92,106,.4);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--red)}
+.val-banner.show{display:block}
+.val-banner strong{display:block;margin-bottom:6px;font-size:13.5px}
+.val-banner ul{padding-left:18px}
+.val-banner ul li{margin-bottom:3px}
+td input.cell-err,td select.cell-err{border-color:var(--red);box-shadow:0 0 0 2px var(--red-dim)}
+td input.cell-ok,td select.cell-ok{border-color:var(--green)}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.shake{animation:shake .35s ease}
+/* TABLE */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{border-bottom:1px solid var(--border)}
+th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);padding:8px 12px}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+tbody tr:last-child{border-bottom:none}
+td{padding:10px 12px}
+td input,td select{padding:6px 8px;font-size:13px}
+.tc-act{width:40px;text-align:center}
+.add-btn{display:flex;align-items:center;gap:8px;padding:8px 14px;border:1px dashed var(--border-light);border-radius:var(--radius);cursor:pointer;color:var(--text-secondary);font-size:12.5px;font-weight:500;background:transparent;margin-top:10px;transition:all .15s}
+.add-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-glow)}
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:var(--radius);font-family:var(--font-ui);font-size:13.5px;font-weight:600;cursor:pointer;border:none;transition:all .15s;line-height:1}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-dim);transform:translateY(-1px);box-shadow:0 4px 16px rgba(79,124,255,.35)}
+.btn-secondary{background:var(--surface-2);color:var(--text-primary);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--border)}
+.btn-ghost{background:transparent;color:var(--text-secondary);border:1px solid transparent}
+.btn-ghost:hover{background:var(--surface-2);color:var(--text-primary)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-icon{width:30px;height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius);background:transparent;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;transition:all .15s}
+.btn-icon:hover{background:var(--surface-2);color:var(--red)}
+.action-bar{display:flex;gap:10px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--border);margin-top:16px}
+.divider{height:1px;background:var(--border);margin:16px 0}
+/* ALERT */
+.alert{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-radius:var(--radius);font-size:13px;margin-bottom:16px}
+.alert.info{background:var(--accent-glow);border:1px solid rgba(79,124,255,.3);color:#a8bfff}
+/* SUMMARY */
+.sum-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+.sum-row:last-child{border-bottom:none}
+.sum-lbl{color:var(--text-secondary);font-weight:500;flex-basis:40%}
+.sum-val{color:var(--text-primary);font-weight:500;text-align:right;flex-basis:58%}
+.total-row{display:flex;justify-content:space-between;padding:14px 16px;background:var(--accent-glow);border:1px solid rgba(79,124,255,.25);border-radius:var(--radius);margin-top:12px}
+.total-lbl{font-size:14px;font-weight:700}
+.total-amt{font-size:20px;font-weight:700;color:var(--accent);font-family:var(--font-mono)}
+/* APPROVAL CHAIN */
+.chain{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.chain-item{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface-2);border-radius:var(--radius);border:1px solid var(--border)}
+.chain-num{width:22px;height:22px;border-radius:50%;background:var(--border);color:var(--text-muted);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+.pill.blue{background:rgba(79,124,255,.15);color:var(--accent)}
+.pill.green{background:var(--green-dim);color:var(--green)}
+/* CONFIRMATION */
+.confirm-hero{text-align:center;padding:48px 24px}
+.confirm-icon{width:72px;height:72px;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:32px;background:var(--green-dim);border:2px solid var(--green)}
+.confirm-title{font-size:22px;font-weight:700;margin-bottom:8px}
+.confirm-sub{font-size:14px;color:var(--text-secondary);margin-bottom:24px;max-width:380px;margin-left:auto;margin-right:auto}
+.ref{display:inline-flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 18px;font-family:var(--font-mono);font-size:15px;font-weight:600;color:var(--accent);margin-bottom:28px}
+.timeline{text-align:left;max-width:360px;margin:0 auto}
+.tl-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+.tl-item:last-child{border-bottom:none}
+.tl-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.tl-dot.done{background:var(--green)}
+.tl-dot.pend{background:var(--amber)}
+.tl-lbl{font-weight:500}
+.tl-meta{font-size:11.5px;color:var(--text-secondary)}
+/* MODAL */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-backdrop.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;width:420px;max-width:90vw;box-shadow:var(--shadow)}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:6px}
+.modal-body{color:var(--text-secondary);font-size:13.5px;margin-bottom:20px;line-height:1.6}
+.modal-foot{display:flex;gap:10px;justify-content:flex-end}
+/* DAP DOC */
+.doc-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-top:32px}
+.doc-head{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.doc-icon{width:32px;height:32px;background:rgba(79,124,255,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.doc-section{padding:20px 24px;border-bottom:1px solid var(--border)}
+.doc-section:last-child{border-bottom:none}
+.doc-section h4{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px}
+.sel-card{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px}
+.sel-card:last-child{margin-bottom:0}
+.sel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.sel-name{font-size:13px;font-weight:600}
+.tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:4px}
+.tag.stable{background:var(--green-dim);color:var(--green)}
+.tag.unstable{background:var(--red-dim);color:var(--red)}
+.tag.context{background:var(--amber-dim);color:var(--amber)}
+.tag.note{background:var(--accent-glow);color:var(--accent)}
+.code{font-family:var(--font-mono);font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:8px 12px;margin:8px 0;color:#a8d0ff;overflow-x:auto;white-space:pre;line-height:1.7}
+.desc{font-size:12.5px;color:var(--text-secondary);line-height:1.6}
+.desc strong{color:var(--text-primary)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px}
+::-webkit-scrollbar-thumb:hover{background:var(--border-light)}
+@media(max-width:700px){.two-col,.form-grid{grid-template-columns:1fr}.field.span2{grid-column:span 1}}
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+<!-- SIDEBAR -->
+<aside id="app-sidebar" class="sidebar" role="navigation" aria-label="Main navigation">
+  <div class="sidebar-logo">
+    <div class="logo-mark">EF</div>
+    <span class="logo-text">ExpenseFlow</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-label">Expenses</div>
+    <a id="nav-new" data-nav="new" class="nav-item active" href="#" role="menuitem">
+      <span class="nav-icon">+</span> New Expense
+    </a>
+    <a id="nav-mine" data-nav="mine" class="nav-item" href="#" role="menuitem">
+      <span class="nav-icon">&#x1F4C4;</span> My Expenses
+      <span class="nav-badge">3</span>
+    </a>
+    <a id="nav-pending" data-nav="pending" class="nav-item" href="#" role="menuitem">
+      <span class="nav-icon">&#x23F3;</span> Pending Approval
+    </a>
+    <div class="nav-label" style="margin-top:12px">Reports</div>
+    <a id="nav-analytics" data-nav="analytics" class="nav-item" href="#" role="menuitem">
+      <span class="nav-icon">&#x1F4CA;</span> Analytics
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="avatar">NR</div>
+      <div>
+        <div class="user-name">Naveen Reddy</div>
+        <div class="user-role">Sr. Solutions Engineer</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main-area">
+  <header class="topbar">
+    <div class="breadcrumb">
+      <span>Expenses</span>
+      <span class="bc-sep">&#x203A;</span>
+      <span id="bc-current">New Expense Report</span>
+    </div>
+    <div class="topbar-actions">
+      <span id="status-badge" class="badge draft">Draft</span>
+    </div>
+  </header>
+
+  <main class="content" role="main">
+
+    <!-- ══ SCREEN 1: ENTRY ══ -->
+    <section id="screen-entry" class="screen active" data-screen="entry">
+
+      <!-- Validation banner -->
+      <div id="val-banner" class="val-banner" role="alert" aria-live="polite"></div>
+
+      <!-- Steps -->
+      <div class="steps-bar">
+        <div class="step current" data-step="1"><div class="step-circle">1</div><div class="step-lbl">Enter Details</div></div>
+        <div class="step-line"></div>
+        <div class="step" data-step="2"><div class="step-circle">2</div><div class="step-lbl">Review</div></div>
+        <div class="step-line"></div>
+        <div class="step" data-step="3"><div class="step-circle">3</div><div class="step-lbl">Submitted</div></div>
+      </div>
+
+      <!-- Report header -->
+      <div class="card">
+        <div class="card-head">
+          <div><div class="card-title">Report Information</div><div class="card-sub">Provide basic details about this expense report</div></div>
+        </div>
+        <div class="form-grid">
+          <div class="field" id="fg-title">
+            <label for="report-title">Report Title <span class="req">*</span></label>
+            <input id="report-title" name="report_title" type="text" placeholder="e.g. Client visit - Bangalore Q2"
+                   data-field="report-title" data-required="true" autocomplete="off"/>
+            <span class="err-msg">Report title is required</span>
+          </div>
+
+          <div class="field" id="fg-category">
+            <label for="expense-category">Category <span class="req">*</span></label>
+            <select id="expense-category" name="expense_category" data-field="expense-category" data-required="true">
+              <option value="">-- Select category --</option>
+              <option value="travel">Business Travel</option>
+              <option value="meals">Meals &amp; Entertainment</option>
+              <option value="software">Software / Subscriptions</option>
+              <option value="equipment">Equipment</option>
+              <option value="training">Training &amp; Conferences</option>
+              <option value="other">Other</option>
+            </select>
+            <span class="err-msg">Please select a category</span>
+          </div>
+
+          <div class="field" id="fg-datefrom">
+            <label for="expense-date-from">Period From <span class="req">*</span></label>
+            <input id="expense-date-from" name="date_from" type="date" data-field="date-from" data-required="true"/>
+            <span class="err-msg" id="datefrom-err">Start date is required</span>
+          </div>
+
+          <div class="field" id="fg-dateto">
+            <label for="expense-date-to">Period To <span class="req">*</span></label>
+            <input id="expense-date-to" name="date_to" type="date" data-field="date-to" data-required="true"/>
+            <span class="err-msg" id="dateto-err">End date is required</span>
+          </div>
+
+          <div class="field" id="fg-costcenter">
+            <label for="cost-center">Cost Center</label>
+            <select id="cost-center" name="cost_center" data-field="cost-center">
+              <option value="">-- Select cost center --</option>
+              <option value="eng">Engineering</option>
+              <option value="sales">Sales</option>
+              <option value="cs">Customer Success</option>
+              <option value="product">Product</option>
+              <option value="ops">Operations</option>
+            </select>
+          </div>
+
+          <div class="field" id="fg-currency">
+            <label for="currency">Currency</label>
+            <select id="currency" name="currency" data-field="currency">
+              <option value="INR">INR - Indian Rupee</option>
+              <option value="USD">USD - US Dollar</option>
+              <option value="EUR">EUR - Euro</option>
+              <option value="GBP">GBP - British Pound</option>
+            </select>
+          </div>
+
+          <div class="field span2" id="fg-desc">
+            <label for="expense-description">Business Purpose / Description</label>
+            <textarea id="expense-description" name="description" data-field="description"
+                      placeholder="Briefly describe the business purpose of these expenses..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Line items -->
+      <div class="card">
+        <div class="card-head">
+          <div><div class="card-title">Expense Line Items</div><div class="card-sub">Add individual receipts and amounts</div></div>
+        </div>
+        <div class="tbl-wrap">
+          <table id="items-table" role="table" aria-label="Expense line items">
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Description</th>
+                <th scope="col">Type</th>
+                <th scope="col">Amount (Rs)</th>
+                <th scope="col">Receipt</th>
+                <th scope="col" class="tc-act"></th>
+              </tr>
+            </thead>
+            <tbody id="items-body">
+              <!-- Row 1 built by JS on load -->
+            </tbody>
+          </table>
+        </div>
+        <button class="add-btn" id="add-item-btn" data-action="add-line-item" onclick="addRow()">
+          + Add Line Item
+        </button>
+        <div class="divider"></div>
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:16px">
+          <span style="font-size:13px;color:var(--text-secondary)">Total Amount</span>
+          <span id="total-display" data-field="total-amount"
+                style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--accent)">Rs 0.00</span>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn-ghost" id="save-draft-btn" data-action="save-draft">Save Draft</button>
+        <button class="btn btn-primary" id="proceed-btn" data-action="proceed-review" onclick="goToReview()">
+          Review &amp; Submit &rarr;
+        </button>
+      </div>
+    </section>
+
+    <!-- ══ SCREEN 2: REVIEW ══ -->
+    <section id="screen-review" class="screen" data-screen="review">
+      <div class="steps-bar">
+        <div class="step complete"><div class="step-circle">&#x2713;</div><div class="step-lbl">Enter Details</div></div>
+        <div class="step-line done"></div>
+        <div class="step current"><div class="step-circle">2</div><div class="step-lbl">Review</div></div>
+        <div class="step-line"></div>
+        <div class="step"><div class="step-circle">3</div><div class="step-lbl">Submitted</div></div>
+      </div>
+      <div class="alert info">
+        <span>&#x2139;&#xFE0F;</span>
+        <span>Please verify all details before submitting. Once submitted this report cannot be edited.</span>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <div><div class="card-title">Report Summary</div><div class="card-sub">Confirm the details below are correct</div></div>
+          <button class="btn btn-sm btn-ghost" id="edit-btn" data-action="edit-report" onclick="goToEntry()">
+            &#x270F;&#xFE0F; Edit
+          </button>
+        </div>
+        <div id="review-summary">
+          <div class="sum-row"><span class="sum-lbl">Report Title</span><span class="sum-val" id="r-title">-</span></div>
+          <div class="sum-row"><span class="sum-lbl">Category</span><span class="sum-val" id="r-cat">-</span></div>
+          <div class="sum-row"><span class="sum-lbl">Period</span><span class="sum-val" id="r-period">-</span></div>
+          <div class="sum-row"><span class="sum-lbl">Cost Center</span><span class="sum-val" id="r-cc">-</span></div>
+          <div class="sum-row"><span class="sum-lbl">Currency</span><span class="sum-val" id="r-cur">INR</span></div>
+          <div class="sum-row"><span class="sum-lbl">Description</span><span class="sum-val" id="r-desc">-</span></div>
+        </div>
+        <div class="total-row">
+          <span class="total-lbl">Total Claim Amount</span>
+          <span class="total-amt" id="r-total">Rs 0.00</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <div><div class="card-title">Approval Routing</div><div class="card-sub">This report will go through the following approval chain</div></div>
+        </div>
+        <div class="chain">
+          <div class="chain-item" data-approver-level="1">
+            <div class="chain-num">1</div>
+            <div class="avatar" style="width:32px;height:32px;font-size:12px">MK</div>
+            <div style="flex:1"><div style="font-size:13px;font-weight:600">Meera Krishnan</div><div style="font-size:11.5px;color:var(--text-secondary)">Direct Manager - Auto-assigned</div></div>
+            <span class="pill blue">Required</span>
+          </div>
+          <div class="chain-item" data-approver-level="2">
+            <div class="chain-num">2</div>
+            <div class="avatar" style="width:32px;height:32px;font-size:12px;background:linear-gradient(135deg,#22c98e,#4f7cff)">SP</div>
+            <div style="flex:1"><div style="font-size:13px;font-weight:600">Suresh Patel</div><div style="font-size:11.5px;color:var(--text-secondary)">Finance Controller - Required for &gt;Rs 25,000</div></div>
+            <span class="pill green">Conditional</span>
+          </div>
+        </div>
+      </div>
+      <div class="action-bar">
+        <button class="btn btn-ghost" id="back-btn" data-action="back-to-entry" onclick="goToEntry()">&larr; Back</button>
+        <button class="btn btn-primary" id="submit-btn" data-action="submit-expense" onclick="openModal()">Submit for Approval</button>
+      </div>
+    </section>
+
+    <!-- ══ SCREEN 3: CONFIRMATION ══ -->
+    <section id="screen-confirm" class="screen" data-screen="confirmation">
+      <div class="steps-bar">
+        <div class="step complete"><div class="step-circle">&#x2713;</div><div class="step-lbl">Enter Details</div></div>
+        <div class="step-line done"></div>
+        <div class="step complete"><div class="step-circle">&#x2713;</div><div class="step-lbl">Review</div></div>
+        <div class="step-line done"></div>
+        <div class="step current"><div class="step-circle">3</div><div class="step-lbl">Submitted</div></div>
+      </div>
+      <div class="card">
+        <div class="confirm-hero">
+          <div class="confirm-icon">&#x2713;</div>
+          <div class="confirm-title">Expense Report Submitted</div>
+          <div class="confirm-sub">Your expense report has been submitted and is pending manager approval. You will receive an email once it is reviewed.</div>
+          <div class="ref"><span>Ref:</span><span id="ref-num">EXP-2026-0421</span></div>
+          <div class="timeline">
+            <div class="tl-item"><div class="tl-dot done"></div><div><div class="tl-lbl">Submitted by Naveen Reddy</div><div class="tl-meta" id="submit-time">Just now</div></div></div>
+            <div class="tl-item"><div class="tl-dot pend"></div><div><div class="tl-lbl">Pending - Meera Krishnan (Manager)</div><div class="tl-meta">Expected within 2 business days</div></div></div>
+            <div class="tl-item"><div class="tl-dot pend"></div><div><div class="tl-lbl">Pending - Finance Controller</div><div class="tl-meta">After manager approval</div></div></div>
+            <div class="tl-item"><div class="tl-dot pend"></div><div><div class="tl-lbl">Reimbursement Processing</div><div class="tl-meta">3-5 business days after final approval</div></div></div>
+          </div>
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-ghost" data-action="view-expenses">View My Expenses</button>
+          <button class="btn btn-primary" id="new-expense-btn" data-action="new-expense" onclick="resetForm()">+ New Expense Report</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ DAP SELECTOR DOCUMENTATION ══ -->
+    <div class="doc-panel" id="dap-docs" role="region" aria-label="DAP selector documentation">
+      <div class="doc-head">
+        <div class="doc-icon">&#x1F3AF;</div>
+        <div><h3 style="font-size:14.5px;font-weight:700">DAP Selector Strategy</h3><p style="font-size:12px;color:var(--text-secondary)">Element identification guide for digital adoption platform targeting</p></div>
+      </div>
+
+      <div class="doc-section">
+        <h4>Recommended Selectors - Stable and Reliable</h4>
+        <div class="two-col">
+          <div class="sel-card" data-selector-type="id">
+            <div class="sel-head"><span class="sel-name">Semantic ID attributes</span><span class="tag stable">Stable</span></div>
+            <div class="code">#report-title
+#expense-category
+#submit-btn
+#add-item-btn
+#proceed-btn</div>
+            <div class="desc">Every key field and CTA has a <strong>hand-authored, human-readable ID</strong> that describes its business purpose. These IDs do not change unless the business logic changes - which is exactly what you want for DAP tooltips and walkthroughs.</div>
+          </div>
+          <div class="sel-card" data-selector-type="data-attribute">
+            <div class="sel-head"><span class="sel-name">data-* custom attributes</span><span class="tag stable">Stable</span></div>
+            <div class="code">[data-action="submit-expense"]
+[data-action="add-line-item"]
+[data-field="expense-category"]
+[data-screen="review"]
+[data-step="2"]</div>
+            <div class="desc"><code>data-*</code> attributes are the gold standard for DAP targeting. They are <strong>invisible to users, survive CSS refactors, and express intent directly</strong>. Every interactive element in this app has a <code>data-action</code> or <code>data-field</code> attribute for this reason.</div>
+          </div>
+          <div class="sel-card" data-selector-type="aria">
+            <div class="sel-head"><span class="sel-name">ARIA label selectors</span><span class="tag stable">Stable</span></div>
+            <div class="code">[aria-label="Main navigation"]
+[aria-label="Expense line items"]
+[aria-label="Approval chain"]
+[aria-current="step"]</div>
+            <div class="desc">ARIA attributes exist for accessibility compliance - maintained rigorously by engineering teams. Removing them would break screen reader compliance. DAP can piggyback on this stability.</div>
+          </div>
+          <div class="sel-card" data-selector-type="name">
+            <div class="sel-head"><span class="sel-name">name attribute (forms)</span><span class="tag stable">Stable</span></div>
+            <div class="code">[name="expense_category"]
+[name="report_title"]
+[name="cost_center"]</div>
+            <div class="desc">Form <code>name</code> attributes are tied to the data model. Changing them breaks form submission and API payloads - making <strong>name attributes nearly immutable</strong> in production apps.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="doc-section">
+        <h4>Selectors to Avoid - Brittle and Unstable</h4>
+        <div class="two-col">
+          <div class="sel-card" data-selector-type="class-unstable">
+            <div class="sel-head"><span class="sel-name">CSS class-based selectors</span><span class="tag unstable">Brittle</span></div>
+            <div class="code">.btn-primary        /* breaks on refactor */
+.card-head button   /* positional */
+.form-grid .field:nth-child(3)</div>
+            <div class="desc">CSS classes are for styling, not identity. A frontend rebrand that renames <code>.btn-primary</code> silently breaks all DAP steps targeting those classes with no warning.</div>
+          </div>
+          <div class="sel-card" data-selector-type="xpath">
+            <div class="sel-head"><span class="sel-name">Positional XPath / DOM path</span><span class="tag unstable">Brittle</span></div>
+            <div class="code">div > div:nth-child(2) > button
+/html/body/div[1]/main/section[1]/...</div>
+            <div class="desc">Absolute DOM paths break the moment any structural change occurs - adding a wrapper div, reordering sections, or inserting a feature-flag component.</div>
+          </div>
+          <div class="sel-card" data-selector-type="autoid">
+            <div class="sel-head"><span class="sel-name">Auto-generated IDs</span><span class="tag unstable">Brittle</span></div>
+            <div class="code">#react-select-42__control
+#ember-view-1847
+#mat-input-23</div>
+            <div class="desc">React, Ember, Angular generate numeric IDs at runtime. <strong>These numbers increment differently every page load.</strong> Targeting <code>#react-select-42</code> works on one session and fails on the next.</div>
+          </div>
+          <div class="sel-card" data-selector-type="text">
+            <div class="sel-head"><span class="sel-name">Text-content matching</span><span class="tag unstable">Brittle</span></div>
+            <div class="code">button:contains("Submit for Approval")
+//button[text()="Submit for Approval"]</div>
+            <div class="desc">Text matching breaks on internationalisation, copy changes, and A/B test variants. If the product team renames the button, every DAP step targeting the old text silently breaks.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="doc-section">
+        <h4>Edge Cases and Tradeoffs</h4>
+        <div class="sel-card" data-selector-type="dynamic-rows">
+          <div class="sel-head"><span class="sel-name">Dynamic rows in the line-items table</span><span class="tag context">Context-dependent</span></div>
+          <div class="code">/* Row 1 - always present */
+#line-amount-1, #line-desc-1
+
+/* Row N - use data-attribute pattern */
+[data-field="line-amount"][data-row="2"]
+[data-field="line-amount"]   /* targets ALL amount fields */</div>
+          <div class="desc">Line items grow dynamically. Row 1 has a stable ID but rows 2, 3, N are generated at runtime. I addressed this by adding <strong>data-row and data-field attributes to every generated cell</strong> so a DAP can target specific rows or the entire column pattern. <strong>Tradeoff:</strong> a walkthrough saying "enter amount in row 1" assumes the user starts with one row - better to target the pattern and guide generically.</div>
+        </div>
+        <div class="sel-card" data-selector-type="multi-screen">
+          <div class="sel-head"><span class="sel-name">Multi-screen state - same DOM, different screens</span><span class="tag context">Context-dependent</span></div>
+          <div class="code">/* Wrong: fires regardless of which screen is visible */
+[data-action="proceed-review"]
+
+/* Better: scope to active screen */
+[data-screen="entry"].active [data-action="proceed-review"]</div>
+          <div class="desc">This app uses a single-page pattern where all three screens exist in the DOM simultaneously. A DAP tooltip targeting a button ID will fire on any screen. The <code>data-screen</code> attribute on each section gives DAP a reliable hook to scope walkthrough steps to the correct screen.</div>
+        </div>
+        <div class="sel-card" data-selector-type="iframes">
+          <div class="sel-head"><span class="sel-name">Salesforce / Workday iframes in production</span><span class="tag context">Production consideration</span></div>
+          <div class="code">/* Cross-origin iframes block DAP selector access entirely */
+/* Same-origin iframes need explicit frame context */
+dap_config: {
+  frame: "#canvas-iframe",
+  selector: "[data-field='amount']"
+}</div>
+          <div class="desc">In production Salesforce Lightning and Workday, many views render inside iframes. <strong>Cross-origin iframes are inaccessible to DAP overlays entirely due to browser same-origin policy.</strong> This is one of the most common reasons enterprise DAP deployments fail in the field - always confirm iframe architecture before writing the first walkthrough step.</div>
+        </div>
+      </div>
+
+      <div class="doc-section">
+        <h4>Summary: Selector Priority Hierarchy</h4>
+        <div class="sel-card">
+          <div class="code">Priority 1 (Best):  data-* custom attributes    [data-action="submit-expense"]
+Priority 2:         Semantic hand-authored IDs  #submit-btn
+Priority 3:         ARIA attributes             [aria-label="Expense line items"]
+Priority 4:         name attributes (forms)     [name="expense_category"]
+-----------------------------------------------------------------------
+Avoid:              Auto-generated IDs          #react-select-42
+Avoid:              CSS utility classes         .btn-primary
+Avoid:              Positional selectors        div:nth-child(3) > button
+Avoid:              Text content matching       button:contains("Submit")</div>
+          <div class="desc" style="margin-top:10px"><strong>Core principle: target identity, not appearance.</strong> Anything that describes how an element looks or where it sits is fragile. Anything that describes what an element IS is durable. In enterprise apps where frontend teams ship weekly, this is the difference between a DAP walkthrough that works for 2 years and one that breaks in the next sprint.</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+</div>
+
+<!-- MODAL -->
+<div id="modal" class="modal-backdrop" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-title">Confirm Submission</div>
+    <div class="modal-body">You are about to submit this expense report for manager approval. Once submitted it cannot be edited. Are you sure?</div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" id="modal-cancel" data-action="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="modal-confirm" data-action="modal-confirm" onclick="confirmSubmit()">Yes, Submit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var rowCount = 0;
+
+/* ─── HELPERS ─── */
+function el(id){ return document.getElementById(id); }
+
+function setError(groupId, msg){
+  var g = el(groupId);
+  if(!g) return;
+  g.classList.remove('is-valid');
+  g.classList.add('has-error');
+  var m = g.querySelector('.err-msg');
+  if(m && msg) m.textContent = msg;
+}
+
+function setValid(groupId){
+  var g = el(groupId);
+  if(!g) return;
+  g.classList.remove('has-error');
+  g.classList.add('is-valid');
+}
+
+function clearVState(groupId){
+  var g = el(groupId);
+  if(!g) return;
+  g.classList.remove('has-error','is-valid');
+}
+
+function setCellState(elem, ok, msg){
+  elem.classList.remove('cell-err','cell-ok');
+  elem.classList.add(ok ? 'cell-ok' : 'cell-err');
+  elem.title = ok ? '' : (msg||'');
+}
+
+/* Live feedback on header fields */
+el('report-title').addEventListener('input', function(){
+  if(this.value.trim()) setValid('fg-title'); else clearVState('fg-title');
+});
+el('expense-category').addEventListener('change', function(){
+  if(this.value) setValid('fg-category'); else clearVState('fg-category');
+});
+el('expense-date-from').addEventListener('change', function(){ validateDates(true); });
+el('expense-date-to').addEventListener('change',   function(){ validateDates(true); });
+
+function validateDates(liveMode){
+  var f = el('expense-date-from').value;
+  var t = el('expense-date-to').value;
+  if(liveMode){
+    if(f) setValid('fg-datefrom'); else clearVState('fg-datefrom');
+    if(t) setValid('fg-dateto');   else clearVState('fg-dateto');
+  }
+  if(f && t && new Date(t) < new Date(f)){
+    setError('fg-dateto','End date must be on or after start date');
+    el('dateto-err').textContent = 'End date must be on or after start date';
+    return false;
+  }
+  return true;
+}
+
+/* Delegated table input listener - no inline quote issues */
+document.getElementById('items-body').addEventListener('input', function(e){
+  var t = e.target;
+  var f = t.getAttribute('data-field');
+  if(f === 'line-description'){
+    setCellState(t, !!t.value.trim(), 'Description required');
+  }
+  if(f === 'line-amount'){
+    var v = parseFloat(t.value);
+    setCellState(t, !isNaN(v) && v > 0, 'Enter amount greater than 0');
+    updateTotal();
+  }
+});
+
+/* ─── MAIN VALIDATION ─── */
+function validateForm(){
+  var errors = [];
+  var firstEl = null;
+
+  /* Title */
+  var title = el('report-title');
+  if(!title.value.trim()){
+    setError('fg-title','Report title is required');
+    errors.push('Report title is required');
+    if(!firstEl) firstEl = title;
+  } else { setValid('fg-title'); }
+
+  /* Category */
+  var cat = el('expense-category');
+  if(!cat.value){
+    setError('fg-category','Please select a category');
+    errors.push('Category is required');
+    if(!firstEl) firstEl = cat;
+  } else { setValid('fg-category'); }
+
+  /* Date from */
+  var df = el('expense-date-from');
+  if(!df.value){
+    setError('fg-datefrom','Start date is required');
+    errors.push('Period start date is required');
+    if(!firstEl) firstEl = df;
+  } else { setValid('fg-datefrom'); }
+
+  /* Date to */
+  var dt = el('expense-date-to');
+  if(!dt.value){
+    setError('fg-dateto','End date is required');
+    errors.push('Period end date is required');
+    if(!firstEl) firstEl = dt;
+  } else if(df.value && new Date(dt.value) < new Date(df.value)){
+    setError('fg-dateto','End date must be on or after start date');
+    errors.push('Period end date must be after start date');
+    if(!firstEl) firstEl = dt;
+  } else { setValid('fg-dateto'); }
+
+  /* Line items */
+  var rows = document.querySelectorAll('[data-row-id]');
+  var hasGood = false;
+  rows.forEach(function(row){
+    var n   = row.getAttribute('data-row-id');
+    var d   = el('line-desc-'   + n);
+    var a   = el('line-amount-' + n);
+    var ok  = true;
+    if(!d || !d.value.trim()){ if(d) setCellState(d,false,'Description required'); ok=false; }
+    else { setCellState(d,true,''); }
+    var av = parseFloat(a ? a.value : '');
+    if(!a || isNaN(av) || av <= 0){
+      if(a) setCellState(a,false,'Enter amount greater than 0');
+      ok=false;
+      if(av < 0) errors.push('Row '+n+': amount cannot be negative');
+    } else { setCellState(a,true,''); }
+    if(ok) hasGood = true;
+  });
+  if(!hasGood){
+    errors.push('At least one line item needs a description and amount greater than 0');
+    if(!firstEl) firstEl = el('line-desc-1');
+  }
+
+  /* Total */
+  var total = 0;
+  document.querySelectorAll('[data-field="line-amount"]').forEach(function(x){ total += parseFloat(x.value)||0; });
+  if(total <= 0) errors.push('Total expense amount must be greater than Rs 0.00');
+
+  /* Banner */
+  var banner = el('val-banner');
+  if(errors.length){
+    var html = '<strong>Please fix the following before continuing:</strong><ul>';
+    errors.forEach(function(e){ html += '<li>'+e+'</li>'; });
+    html += '</ul>';
+    banner.innerHTML = html;
+    banner.classList.add('show');
+    var btn = el('proceed-btn');
+    btn.classList.add('shake');
+    setTimeout(function(){ btn.classList.remove('shake'); }, 400);
+    if(firstEl){ firstEl.scrollIntoView({behavior:'smooth',block:'center'}); setTimeout(function(){ firstEl.focus(); },300); }
+    return false;
+  }
+  banner.classList.remove('show');
+  return true;
+}
+
+/* ─── ROW BUILDER ─── */
+function buildRow(n){
+  var tr = document.createElement('tr');
+  tr.id = 'row-' + n;
+  tr.setAttribute('data-row-id', n);
+
+  var types = '<option value="">Type</option><option value="flight">Flight</option><option value="hotel">Hotel</option><option value="taxi">Taxi</option><option value="meal">Meal</option><option value="other">Other</option>';
+  var receipts = '<option value="uploaded">Uploaded</option><option value="missing">Missing</option><option value="na">N/A</option>';
+
+  tr.innerHTML =
+    '<td><input type="date" id="line-date-'+n+'" name="line_date_'+n+'" data-field="line-date" data-row="'+n+'"/></td>'+
+    '<td><input type="text" id="line-desc-'+n+'" name="line_desc_'+n+'" placeholder="What was this for?" data-field="line-description" data-row="'+n+'"/></td>'+
+    '<td><select id="line-type-'+n+'" name="line_type_'+n+'" data-field="line-type" data-row="'+n+'">'+types+'</select></td>'+
+    '<td><div class="pfx-wrap"><span class="pfx">Rs</span><input type="number" id="line-amount-'+n+'" name="line_amount_'+n+'" placeholder="0.00" min="0" step="0.01" data-field="line-amount" data-row="'+n+'"/></div></td>'+
+    '<td><select id="line-receipt-'+n+'" name="line_receipt_'+n+'" data-field="line-receipt" data-row="'+n+'">'+receipts+'</select></td>'+
+    '<td class="tc-act"><button class="btn-icon" id="del-'+n+'" data-action="delete-row" data-row="'+n+'" onclick="delRow('+n+')" aria-label="Delete row '+n+'">&#x1F5D1;</button></td>';
+  return tr;
+}
+
+function addRow(){
+  rowCount++;
+  el('items-body').appendChild(buildRow(rowCount));
+}
+
+function delRow(n){
+  var r = el('row-'+n);
+  if(r){ r.remove(); updateTotal(); }
+}
+
+function updateTotal(){
+  var t = 0;
+  document.querySelectorAll('[data-field="line-amount"]').forEach(function(x){ t += parseFloat(x.value)||0; });
+  var fmt = 'Rs ' + t.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  el('total-display').textContent = fmt;
+  el('r-total').textContent = fmt;
+}
+
+/* ─── SCREENS ─── */
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  el('screen-'+name).classList.add('active');
+}
+
+function goToReview(){
+  if(!validateForm()) return;
+  var cat = el('expense-category');
+  var cc  = el('cost-center');
+  var cur = el('currency');
+  el('r-title').textContent  = el('report-title').value || '-';
+  el('r-cat').textContent    = cat.options[cat.selectedIndex] ? cat.options[cat.selectedIndex].text : '-';
+  el('r-period').textContent = (el('expense-date-from').value + ' to ' + el('expense-date-to').value) || '-';
+  el('r-cc').textContent     = cc.options[cc.selectedIndex]  ? cc.options[cc.selectedIndex].text  : '-';
+  el('r-cur').textContent    = cur.options[cur.selectedIndex] ? cur.options[cur.selectedIndex].text : 'INR';
+  el('r-desc').textContent   = el('expense-description').value || '-';
+  el('status-badge').className = 'badge pending';
+  el('status-badge').textContent = 'Pending Review';
+  el('bc-current').textContent = 'Review & Submit';
+  showScreen('review');
+}
+
+function goToEntry(){
+  el('status-badge').className = 'badge draft';
+  el('status-badge').textContent = 'Draft';
+  el('bc-current').textContent = 'New Expense Report';
+  showScreen('entry');
+}
+
+/* ─── MODAL ─── */
+function openModal(){ el('modal').classList.add('open'); }
+function closeModal(){ el('modal').classList.remove('open'); }
+function confirmSubmit(){
+  closeModal();
+  var ref = 'EXP-2026-0'+(Math.floor(Math.random()*900)+100);
+  el('ref-num').textContent   = ref;
+  el('submit-time').textContent = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  el('status-badge').className = 'badge approved';
+  el('status-badge').textContent = 'Submitted';
+  el('bc-current').textContent = 'Confirmation';
+  showScreen('confirm');
+}
+el('modal').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
+
+/* ─── RESET ─── */
+function resetForm(){
+  ['report-title','expense-category','expense-date-from','expense-date-to','cost-center','expense-description'].forEach(function(id){
+    var x = el(id); if(x) x.value='';
+  });
+  el('currency').value = 'INR';
+  document.querySelectorAll('.field').forEach(function(g){ g.classList.remove('has-error','is-valid'); });
+  el('val-banner').classList.remove('show');
+  el('items-body').innerHTML = '';
+  rowCount = 0;
+  addRow();
+  updateTotal();
+  el('status-badge').className='badge draft';
+  el('status-badge').textContent='Draft';
+  el('bc-current').textContent='New Expense Report';
+  showScreen('entry');
+}
+
+/* ─── INIT ─── */
+addRow();
+</script>
+</body>
+</html>
